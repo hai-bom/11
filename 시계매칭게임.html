@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>반짝반짝 시계 공부 (5문제)</title>
+    <style>
+        body { font-family: 'Nanum Gothic', sans-serif; background-color: #fff9c4; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        #game-container { background: white; padding: 30px; border-radius: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; border: 8px solid #ffcc80; width: 400px; }
+        h1 { color: #f57c00; font-size: 24px; margin-bottom: 10px; }
+        #progress { font-size: 18px; color: #795548; margin-bottom: 10px; font-weight: bold; }
+        #clock-canvas { background: #fff; margin: 10px 0; border-radius: 50%; }
+        .options-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        button { padding: 15px; font-size: 18px; cursor: pointer; background-color: #81c784; color: white; border: none; border-radius: 15px; box-shadow: 0 4px #66bb6a; transition: 0.1s; font-weight: bold; }
+        button:active { box-shadow: 0 0 #66bb6a; transform: translateY(4px); }
+        #message { height: 40px; margin-top: 15px; font-weight: bold; font-size: 1.1rem; color: #ff5722; }
+        /* 결과 창 스타일 */
+        #result-screen { display: none; }
+        .restart-btn { background-color: #64b5f6; box-shadow: 0 4px #42a5f5; margin-top: 20px; width: 100%; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="question-screen">
+        <h1>⏰ 몇 시일까요?</h1>
+        <div id="progress">문제: 1 / 5</div>
+        <canvas id="clock-canvas" width="260" height="260"></canvas>
+        <div id="message">바늘을 잘 살펴보세요!</div>
+        <div class="options-container" id="options"></div>
+    </div>
+
+    <div id="result-screen">
+        <h1>🎉 우와! 다 풀었어요!</h1>
+        <div id="final-score" style="font-size: 24px; margin: 20px 0;"></div>
+        <p id="feedback-msg"></p>
+        <button class="restart-btn" onclick="resetGame()">다시 하기</button>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('clock-canvas');
+    const ctx = canvas.getContext('2d');
+    const radius = canvas.width / 2;
+    ctx.translate(radius, radius);
+    const drawRadius = radius * 0.85;
+
+    let currentQuestion = 1;
+    let score = 0;
+    const totalQuestions = 5;
+    let correctAnswer = "";
+
+    function startGame() {
+        currentQuestion = 1;
+        score = 0;
+        document.getElementById('question-screen').style.display = 'block';
+        document.getElementById('result-screen').style.display = 'none';
+        generateQuestion();
+    }
+
+    function generateQuestion() {
+        document.getElementById('progress').innerText = `문제: ${currentQuestion} / ${totalQuestions}`;
+        document.getElementById('message').innerText = "바늘을 잘 살펴보세요!";
+        document.getElementById('message').style.color = "#f57c00";
+
+        // 2학년 수준: 정각, 30분, 그리고 5분 단위 일부 포함
+        const h = Math.floor(Math.random() * 12) + 1;
+        const m = (Math.floor(Math.random() * 12) * 5); // 0, 5, 10... 55분
+        
+        correctAnswer = `${h}시 ${m === 0 ? '정각' : m + '분'}`;
+        drawClock(h, m);
+        createOptions(h, m);
+    }
+
+    function drawClock(h, m) {
+        ctx.clearRect(-radius, -radius, canvas.width, canvas.height);
+        
+        // 시계 테두리
+        ctx.beginPath();
+        ctx.arc(0, 0, drawRadius, 0, 2 * Math.PI);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+
+        // 숫자 (1~12)
+        ctx.font = "bold 20px Arial";
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#333";
+        for (let num = 1; num <= 12; num++) {
+            let ang = num * Math.PI / 6;
+            ctx.rotate(ang);
+            ctx.translate(0, -drawRadius * 0.8);
+            ctx.rotate(-ang);
+            ctx.fillText(num.toString(), 0, 0);
+            ctx.rotate(ang);
+            ctx.translate(0, drawRadius * 0.8);
+            ctx.rotate(-ang);
+        }
+
+        // 시침 (짧은 바늘)
+        let hourPos = (h % 12) * Math.PI / 6 + (m * Math.PI / (6 * 60));
+        drawHand(hourPos, drawRadius * 0.5, 8, "#333");
+
+        // 분침 (긴 바늘)
+        let minutePos = m * Math.PI / 30;
+        drawHand(minutePos, drawRadius * 0.75, 5, "#ff5722");
+
+        // 중심점
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, 2 * Math.PI);
+        ctx.fillStyle = '#333';
+        ctx.fill();
+    }
+
+    function drawHand(pos, length, width, color) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = color;
+        ctx.moveTo(0, 0);
+        ctx.rotate(pos);
+        ctx.lineTo(0, -length);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function createOptions(h, m) {
+        const container = document.getElementById('options');
+        container.innerHTML = '';
+        let options = [correctAnswer];
+
+        while(options.length < 4) {
+            let rh = Math.floor(Math.random() * 12) + 1;
+            let rm = (Math.floor(Math.random() * 12) * 5);
+            let opt = `${rh}시 ${rm === 0 ? '정각' : rm + '분'}`;
+            if (!options.includes(opt)) options.push(opt);
+        }
+        options.sort(() => Math.random() - 0.5);
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(opt);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(selected) {
+        if (selected === correctAnswer) {
+            score++;
+            document.getElementById('message').innerText = "정답! 멋져요! 👍";
+            document.getElementById('message').style.color = "#4caf50";
+        } else {
+            document.getElementById('message').innerText = `아쉬워요! 정답은 ${correctAnswer}`;
+            document.getElementById('message').style.color = "#f44336";
+        }
+
+        // 모든 버튼 비활성화 (연타 방지)
+        const buttons = document.querySelectorAll('#options button');
+        buttons.forEach(b => b.disabled = true);
+
+        setTimeout(() => {
+            if (currentQuestion < totalQuestions) {
+                currentQuestion++;
+                generateQuestion();
+            } else {
+                showResult();
+            }
+        }, 1500);
+    }
+
+    function showResult() {
+        document.getElementById('question-screen').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('final-score').innerText = `${totalQuestions}문제 중 ${score}문제를 맞혔어요!`;
+        
+        let comment = "";
+        if (score === 5) comment = "와! 만점이에요! 시계 박사님이시네요! 🏆";
+        else if (score >= 3) comment = "와~ 시계를 아주 잘 보는군요! 😊";
+        else comment = "조금 더 연습하면 시계 박사가 될 수 있어요! 💪";
+        
+        document.getElementById('feedback-msg').innerText = comment;
+    }
+
+    function resetGame() {
+        startGame();
+    }
+
+    startGame();
+</script>
+
+</body>
+</html>
